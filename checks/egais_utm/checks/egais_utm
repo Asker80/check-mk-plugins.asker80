@@ -1,0 +1,246 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# Requires pytz module. Centos install: yum install pytz
+
+from datetime import datetime, timedelta, tzinfo
+import pytz
+
+class FixedOffset(tzinfo):
+    """Fixed offset in minutes: `time = utc_time + utc_offset`."""
+    def __init__(self, offset):
+        self.__offset = timedelta(minutes=offset)
+        hours, minutes = divmod(offset, 60)
+        #NOTE: the last part is to remind about deprecated POSIX GMT+h timezones
+        #  that have the opposite sign in the name;
+        #  the corresponding numeric value is not used e.g., no minutes
+        self.__name = '<%+03d%02d>%+d' % (hours, minutes, -hours)
+    def utcoffset(self, dt=None):
+        return self.__offset
+    def tzname(self, dt=None):
+        return self.__name
+    def dst(self, dt=None):
+        return timedelta(0)
+    def __repr__(self):
+        return 'FixedOffset(%d)' % (self.utcoffset().total_seconds() / 60)
+
+def ParseAwareTimeStr(dtAwareStr, parseFormatStr):
+    naive_time_str, offset_str = dtAwareStr[:-5], dtAwareStr[-5:]
+    naive_dt = datetime.strptime(naive_time_str, parseFormatStr)
+    offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
+    if offset_str[0] == "-":
+        offset = -offset
+    return naive_dt.replace(tzinfo=FixedOffset(offset))
+
+# Example output from agent:
+# <<<egais_utm>>>
+# egais transport_version OK 2.0.5 build 1013
+# egais transport_status OK Используется продуктивный контур. Издатель RSA сертификата [pki.fsrar.ru] - Соответствует контуру.
+# egais license_status WARNING Лицензия на вид деятельности не действует
+# egais db_creation_date 2017-10-19T11:01:27.611
+# egais unsent_docs OK
+# egais cert_pki OK 2017-10-19T10:48:08+1000 2018-10-19T10:58:08+1000
+# egais cert_gost OK 2017-10-18T10:49:01+1000 2018-10-18T10:59:01+1000
+
+factory_settings["unsent_docs_default_levels"] = {
+    "levels"      : (15, 30),
+}
+factory_settings["cert_default_levels"] = {
+    "levels"      : (30, 15),
+}
+
+def inventory_egais_utm_transport_version(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "transport_version" ):
+            yield "UTM version", {}
+
+def inventory_egais_utm_transport_status(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "transport_status" ):
+            yield "UTM status", {}
+
+def inventory_egais_utm_license_status(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "license_status" ):
+            yield "license status", {}
+
+def inventory_egais_utm_db_creation_date(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "db_creation_date" ):
+            yield "UTM db creation date", {}
+
+def inventory_egais_utm_unsent_docs(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "unsent_docs" ):
+            yield "unsent docs", {}
+
+def inventory_egais_utm_cert_pki(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_pki" ):
+            yield "PKI Certificate", {}
+
+def inventory_egais_utm_cert_gost(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_gost" ):
+            yield "GOST Certificate", {}
+
+
+
+def check_egais_utm_transport_version(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "transport_version" ):
+            status       = line[2]
+            if status == "OK":
+                return 0, "Version %s" % ' '.join(line[3:len(line)])
+            else:
+                return 2, "%s" % ' '.join(line[3:len(line)])
+
+def check_egais_utm_transport_status(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "transport_status" ):
+            status       = line[2]
+            if status == "OK":
+                return 0, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+            else:
+                return 2, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+
+def check_egais_utm_license_status(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "license_status" ):
+            status       = line[2]
+            if status == "OK":
+                return 0, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+            else:
+                return 2, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+
+def check_egais_utm_db_creation_date(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "db_creation_date" ):
+            return 0, u"Дата создания базы данных: %s" % time.strftime('%Y-%m-%d %H:%M:%S',time.strptime(line[2],'%Y-%m-%dT%H:%M:%S.%f'))
+
+def check_egais_utm_unsent_docs(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "unsent_docs" ):
+            status       = line[2]
+            if status == "OK":
+                return 0, u"Отсутствуют неотправленные розничные документы"
+            else:
+                doc_date_str = line[3]
+#                naive_time_str, offset_str = doc_date_str[:-5], doc_date_str[-5:]
+#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S.%f')
+#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
+#                if offset_str[0] == "-":
+#                    offset = -offset
+#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
+                warn, crit = params["levels"]
+                timestamp = ParseAwareTimeStr(doc_date_str, '%Y-%m-%dT%H:%M:%S.%f')
+                state = 0
+                dt_diff = (datetime.now(pytz.utc)) - timestamp
+                if dt_diff >= timedelta(minutes=crit):
+                    state = 2
+                elif dt_diff >= timedelta(minutes=warn):
+                    state = 1
+                return state, u"Дата самого старого неотправленного розничного документа: %s (%s ago)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), get_age_human_readable(dt_diff.days*24*3600+dt_diff.seconds))
+
+def check_egais_utm_cert_pki(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_pki" ):
+            status       = line[2]
+            cert_issue   = line[3]
+            cert_expire  = line[4]
+            if status == "OK":
+#                naive_time_str, offset_str = cert_expire[:-5], cert_expire[-5:]
+#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S')
+#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
+#                if offset_str[0] == "-":
+#                    offset = -offset
+#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
+                warn, crit = params["levels"]
+                timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
+                state = 0
+                dt_diff = timestamp - datetime.now(pytz.utc)
+                if dt_diff <= timedelta(days=crit):
+                    state = 2
+                elif dt_diff <= timedelta(days=warn):
+                    state = 1
+                if state == 0:
+                    return state, u"Срок действия сертификата PKI истекает %s" % timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    return state, u"Срок действия сертификата PKI истекает %s (in less than %s days)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), (dt_diff.days))
+            else:
+                return 2, u"Проблема с сертификатом PKI"
+
+def check_egais_utm_cert_gost(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_gost" ):
+            status       = line[2]
+            cert_issue   = line[3]
+            cert_expire  = line[4]
+            if status == "OK":
+#                naive_time_str, offset_str = cert_expire[:-5], cert_expire[-5:]
+#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S')
+#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
+#                if offset_str[0] == "-":
+#                    offset = -offset
+#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
+                warn, crit = params["levels"]
+                timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
+                state = 0
+                dt_diff = timestamp - datetime.now(pytz.utc)
+                if dt_diff <= timedelta(days=crit):
+                    state = 2
+                elif dt_diff <= timedelta(days=warn):
+                    state = 1
+                if state == 0:
+                    return state, u"Срок действия сертификата ГОСТ истекает %s" % timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                else:
+                    return state, u"Срок действия сертификата ГОСТ истекает %s (in less than %s days)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), (dt_diff.days))
+            else:
+                return 2, u"Проблема с сертификатом ГОСТ"
+
+
+
+check_info['egais_utm.transport_version']      = {
+    "check_function"          : check_egais_utm_transport_version,
+    "inventory_function"      : inventory_egais_utm_transport_version,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+}
+check_info['egais_utm.transport_status']      = {
+    "check_function"          : check_egais_utm_transport_status,
+    "inventory_function"      : inventory_egais_utm_transport_status,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+}
+check_info['egais_utm.license_status']      = {
+    "check_function"          : check_egais_utm_license_status,
+    "inventory_function"      : inventory_egais_utm_license_status,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+}
+check_info['egais_utm.db_creation_date']      = {
+    "check_function"          : check_egais_utm_db_creation_date,
+    "inventory_function"      : inventory_egais_utm_db_creation_date,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+}
+check_info['egais_utm.unsent_docs']      = {
+    "check_function"          : check_egais_utm_unsent_docs,
+    "inventory_function"      : inventory_egais_utm_unsent_docs,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+    "default_levels_variable" : "unsent_docs_default_levels",
+}
+check_info['egais_utm.cert_pki']      = {
+    "check_function"          : check_egais_utm_cert_pki,
+    "inventory_function"      : inventory_egais_utm_cert_pki,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+    "default_levels_variable" : "cert_default_levels",
+}
+check_info['egais_utm.cert_gost']      = {
+    "check_function"          : check_egais_utm_cert_gost,
+    "inventory_function"      : inventory_egais_utm_cert_gost,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+    "default_levels_variable" : "cert_default_levels",
+}
