@@ -229,6 +229,7 @@ check_info['egais_utm.unsent_docs']      = {
     "service_description"     : "EGAIS %s",
     "has_perfdata"            : False,
     "default_levels_variable" : "unsent_docs_default_levels",
+    "group"                   : "egais_utm_unsent_docs_settings",
 }
 check_info['egais_utm.cert_pki']      = {
     "check_function"          : check_egais_utm_cert_pki,
@@ -236,6 +237,7 @@ check_info['egais_utm.cert_pki']      = {
     "service_description"     : "EGAIS %s",
     "has_perfdata"            : False,
     "default_levels_variable" : "cert_default_levels",
+    "group"                   : "egais_utm_cert_settings",
 }
 check_info['egais_utm.cert_gost']      = {
     "check_function"          : check_egais_utm_cert_gost,
@@ -243,4 +245,5 @@ check_info['egais_utm.cert_gost']      = {
     "service_description"     : "EGAIS %s",
     "has_perfdata"            : False,
     "default_levels_variable" : "cert_default_levels",
+    "group"                   : "egais_utm_cert_settings",
 }
