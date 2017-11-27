@@ -1,5 +1,5 @@
 # egais_utm check
-Checks status of the Egais Utm server on which the agent is run. Only Windows agent is supported ATM.
+Checks status of Egais Utm server on which the agent is run. Only Windows agent is supported ATM.
 
 The check requires pytz module installed on Check_MK server. The agent requires [HtmlAgilityPack](https://github.com/zzzprojects/html-agility-pack) 
 dll in MK_ROOT folder (usually C:\Program Files (x86)\check_mk\\).
