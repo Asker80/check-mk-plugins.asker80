@@ -90,12 +90,14 @@ if ($web.StatusCode -eq 'OK')
     $ar_split = $pre_nodes[5].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
     $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
     $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
-    "egais cert_pki $($pre_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+#    "egais cert_pki $($pre_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+    "egais cert_age PKI $($pre_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
 
     $ar_split = $pre_nodes[6].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
     $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
     $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
-    "egais cert_gost $($pre_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+#    "egais cert_gost $($pre_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+    "egais cert_age GOST $($pre_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
 }
 else
 {

@@ -48,6 +48,10 @@ factory_settings["cert_default_levels"] = {
     "levels"      : (30, 15),
 }
 
+def format_egais_cert_name(line):
+    return "%s Certificate" % line[2]
+
+
 def inventory_egais_utm_transport_version(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "transport_version" ):
@@ -71,7 +75,7 @@ def inventory_egais_utm_db_creation_date(checkname, info):
 def inventory_egais_utm_unsent_docs(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "unsent_docs" ):
-            yield "unsent docs", {}
+            yield None, {} #return [(None, None)]
 
 def inventory_egais_utm_cert_pki(checkname, info):
     for line in info:
@@ -82,6 +86,11 @@ def inventory_egais_utm_cert_gost(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "cert_gost" ):
             yield "GOST Certificate", {}
+
+def inventory_egais_utm_cert_age(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_age" ):
+            yield format_egais_cert_name(line), {}
 
 
 
@@ -197,6 +206,34 @@ def check_egais_utm_cert_gost(item, params, info):
             else:
                 return 2, u"Проблема с сертификатом ГОСТ"
 
+def check_egais_utm_cert_age(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "cert_age" ):
+            cert_type    = line[2]
+            status       = line[3]
+            cert_issue   = line[4]
+            cert_expire  = line[5]
+            if (format_egais_cert_name(line)) == item:
+                if cert_type == 'PKI':
+                    ret_cert_type = u"PKI"
+                elif cert_type == 'GOST':
+                    ret_cert_type = u"ГОСТ"
+                if status == "OK":
+                    warn, crit = params["levels"]
+                    timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
+                    state = 0
+                    dt_diff = timestamp - datetime.now(pytz.utc)
+                    if dt_diff <= timedelta(days=crit):
+                        state = 2
+                    elif dt_diff <= timedelta(days=warn):
+                        state = 1
+                    if state == 0:
+                        return state, u"Срок действия сертификата %s истекает %s" % (ret_cert_type, timestamp.strftime('%Y-%m-%d %H:%M:%S'))
+                    else:
+                        return state, u"Срок действия сертификата %s истекает %s (in less than %s days)" % (ret_cert_type, timestamp.strftime('%Y-%m-%d %H:%M:%S'), (dt_diff.days))
+                else:
+                    return 2, u"Проблема с сертификатом %s" % ret_cert_type
+
 
 
 check_info['egais_utm.transport_version']      = {
@@ -226,7 +263,7 @@ check_info['egais_utm.db_creation_date']      = {
 check_info['egais_utm.unsent_docs']      = {
     "check_function"          : check_egais_utm_unsent_docs,
     "inventory_function"      : inventory_egais_utm_unsent_docs,
-    "service_description"     : "EGAIS %s",
+    "service_description"     : "EGAIS unsent docs",
     "has_perfdata"            : False,
     "default_levels_variable" : "unsent_docs_default_levels",
     "group"                   : "egais_utm_unsent_docs_settings",
@@ -242,6 +279,14 @@ check_info['egais_utm.cert_pki']      = {
 check_info['egais_utm.cert_gost']      = {
     "check_function"          : check_egais_utm_cert_gost,
     "inventory_function"      : inventory_egais_utm_cert_gost,
+    "service_description"     : "EGAIS %s",
+    "has_perfdata"            : False,
+    "default_levels_variable" : "cert_default_levels",
+    "group"                   : "egais_utm_cert_settings",
+}
+check_info['egais_utm.cert_age']      = {
+    "check_function"          : check_egais_utm_cert_age,
+    "inventory_function"      : inventory_egais_utm_cert_age,
     "service_description"     : "EGAIS %s",
     "has_perfdata"            : False,
     "default_levels_variable" : "cert_default_levels",

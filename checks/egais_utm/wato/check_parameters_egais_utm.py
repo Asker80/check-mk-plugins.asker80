@@ -22,10 +22,11 @@ register_check_parameters(
         ],
         optional_keys = False,
     ),
-    TextAscii(
-        title = _("Description (should always be empty)"),
-        allow_empty = True
-    ),
+    None,
+#    TextAscii(
+#        title = _("Description (should always be empty)"),
+#        allow_empty = True
+#    ),
     match_type = 'dict',
 )
 
