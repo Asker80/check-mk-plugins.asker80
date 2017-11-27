@@ -55,37 +55,27 @@ def format_egais_cert_name(line):
 def inventory_egais_utm_transport_version(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "transport_version" ):
-            yield "UTM version", {}
+            yield None, {}
 
 def inventory_egais_utm_transport_status(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "transport_status" ):
-            yield "UTM status", {}
+            yield None, {}
 
 def inventory_egais_utm_license_status(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "license_status" ):
-            yield "license status", {}
+            yield None, {}
 
 def inventory_egais_utm_db_creation_date(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "db_creation_date" ):
-            yield "UTM db creation date", {}
+            yield None, {}
 
 def inventory_egais_utm_unsent_docs(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "unsent_docs" ):
             yield None, {} #return [(None, None)]
-
-def inventory_egais_utm_cert_pki(checkname, info):
-    for line in info:
-        if ( line[0], line[1] ) == ( "egais", "cert_pki" ):
-            yield "PKI Certificate", {}
-
-def inventory_egais_utm_cert_gost(checkname, info):
-    for line in info:
-        if ( line[0], line[1] ) == ( "egais", "cert_gost" ):
-            yield "GOST Certificate", {}
 
 def inventory_egais_utm_cert_age(checkname, info):
     for line in info:
@@ -134,12 +124,6 @@ def check_egais_utm_unsent_docs(item, params, info):
                 return 0, u"Отсутствуют неотправленные розничные документы"
             else:
                 doc_date_str = line[3]
-#                naive_time_str, offset_str = doc_date_str[:-5], doc_date_str[-5:]
-#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S.%f')
-#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
-#                if offset_str[0] == "-":
-#                    offset = -offset
-#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
                 warn, crit = params["levels"]
                 timestamp = ParseAwareTimeStr(doc_date_str, '%Y-%m-%dT%H:%M:%S.%f')
                 state = 0
@@ -149,62 +133,6 @@ def check_egais_utm_unsent_docs(item, params, info):
                 elif dt_diff >= timedelta(minutes=warn):
                     state = 1
                 return state, u"Дата самого старого неотправленного розничного документа: %s (%s ago)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), get_age_human_readable(dt_diff.days*24*3600+dt_diff.seconds))
-
-def check_egais_utm_cert_pki(item, params, info):
-    for line in info:
-        if ( line[0], line[1] ) == ( "egais", "cert_pki" ):
-            status       = line[2]
-            cert_issue   = line[3]
-            cert_expire  = line[4]
-            if status == "OK":
-#                naive_time_str, offset_str = cert_expire[:-5], cert_expire[-5:]
-#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S')
-#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
-#                if offset_str[0] == "-":
-#                    offset = -offset
-#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
-                warn, crit = params["levels"]
-                timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
-                state = 0
-                dt_diff = timestamp - datetime.now(pytz.utc)
-                if dt_diff <= timedelta(days=crit):
-                    state = 2
-                elif dt_diff <= timedelta(days=warn):
-                    state = 1
-                if state == 0:
-                    return state, u"Срок действия сертификата PKI истекает %s" % timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                else:
-                    return state, u"Срок действия сертификата PKI истекает %s (in less than %s days)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), (dt_diff.days))
-            else:
-                return 2, u"Проблема с сертификатом PKI"
-
-def check_egais_utm_cert_gost(item, params, info):
-    for line in info:
-        if ( line[0], line[1] ) == ( "egais", "cert_gost" ):
-            status       = line[2]
-            cert_issue   = line[3]
-            cert_expire  = line[4]
-            if status == "OK":
-#                naive_time_str, offset_str = cert_expire[:-5], cert_expire[-5:]
-#                naive_dt = datetime.strptime(naive_time_str, '%Y-%m-%dT%H:%M:%S')
-#                offset = int(offset_str[-4:-2])*60 + int(offset_str[-2:])
-#                if offset_str[0] == "-":
-#                    offset = -offset
-#                timestamp = naive_dt.replace(tzinfo=FixedOffset(offset))
-                warn, crit = params["levels"]
-                timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
-                state = 0
-                dt_diff = timestamp - datetime.now(pytz.utc)
-                if dt_diff <= timedelta(days=crit):
-                    state = 2
-                elif dt_diff <= timedelta(days=warn):
-                    state = 1
-                if state == 0:
-                    return state, u"Срок действия сертификата ГОСТ истекает %s" % timestamp.strftime('%Y-%m-%d %H:%M:%S')
-                else:
-                    return state, u"Срок действия сертификата ГОСТ истекает %s (in less than %s days)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), (dt_diff.days))
-            else:
-                return 2, u"Проблема с сертификатом ГОСТ"
 
 def check_egais_utm_cert_age(item, params, info):
     for line in info:
@@ -239,25 +167,25 @@ def check_egais_utm_cert_age(item, params, info):
 check_info['egais_utm.transport_version']      = {
     "check_function"          : check_egais_utm_transport_version,
     "inventory_function"      : inventory_egais_utm_transport_version,
-    "service_description"     : "EGAIS %s",
+    "service_description"     : "EGAIS UTM version",
     "has_perfdata"            : False,
 }
 check_info['egais_utm.transport_status']      = {
     "check_function"          : check_egais_utm_transport_status,
     "inventory_function"      : inventory_egais_utm_transport_status,
-    "service_description"     : "EGAIS %s",
+    "service_description"     : "EGAIS UTM status",
     "has_perfdata"            : False,
 }
 check_info['egais_utm.license_status']      = {
     "check_function"          : check_egais_utm_license_status,
     "inventory_function"      : inventory_egais_utm_license_status,
-    "service_description"     : "EGAIS %s",
+    "service_description"     : "EGAIS license status",
     "has_perfdata"            : False,
 }
 check_info['egais_utm.db_creation_date']      = {
     "check_function"          : check_egais_utm_db_creation_date,
     "inventory_function"      : inventory_egais_utm_db_creation_date,
-    "service_description"     : "EGAIS %s",
+    "service_description"     : "EGAIS UTM db creation date",
     "has_perfdata"            : False,
 }
 check_info['egais_utm.unsent_docs']      = {
@@ -267,22 +195,6 @@ check_info['egais_utm.unsent_docs']      = {
     "has_perfdata"            : False,
     "default_levels_variable" : "unsent_docs_default_levels",
     "group"                   : "egais_utm_unsent_docs_settings",
-}
-check_info['egais_utm.cert_pki']      = {
-    "check_function"          : check_egais_utm_cert_pki,
-    "inventory_function"      : inventory_egais_utm_cert_pki,
-    "service_description"     : "EGAIS %s",
-    "has_perfdata"            : False,
-    "default_levels_variable" : "cert_default_levels",
-    "group"                   : "egais_utm_cert_settings",
-}
-check_info['egais_utm.cert_gost']      = {
-    "check_function"          : check_egais_utm_cert_gost,
-    "inventory_function"      : inventory_egais_utm_cert_gost,
-    "service_description"     : "EGAIS %s",
-    "has_perfdata"            : False,
-    "default_levels_variable" : "cert_default_levels",
-    "group"                   : "egais_utm_cert_settings",
 }
 check_info['egais_utm.cert_age']      = {
     "check_function"          : check_egais_utm_cert_age,
