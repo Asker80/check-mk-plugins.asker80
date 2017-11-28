@@ -1,5 +1,4 @@
 ﻿param(
-    #$url = "http://m15-1c:8080" 
     $url = "http://$($env:COMPUTERNAME):8080"
 )
 
@@ -69,35 +68,68 @@ if ($web.StatusCode -eq 'OK')
         $ErrorActionPreference = $prevEAP
         return
     }
-#    $pre_nodes = ((($wr.ParsedHtml.body.childNodes|?{$_.nodeName -eq "div" -and $_.className -contains "container"}).childNodes|
-#        ?{$_.nodeName -eq "div" -and $_.className -eq "tab-content"}).childNodes|?{$_.nodeName -eq "div" -and $_.id -eq "home"}).childNodes|
-#        ?{$_.nodeName -eq "pre"}
 
-    $pre_nodes = $wr.DocumentNode.SelectNodes('//div[@class="container"]/div[@class="tab-content"]/div[@id="home"]/pre')
-    $utm_ver = $pre_nodes[0].ChildNodes['#text'].Text.Split("`n")
-    "egais transport_version OK $($utm_ver[0].Split(":")[1]) build $($utm_ver[2].Split(":")[1])"
-    "egais transport_status $($pre_nodes[1].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($pre_nodes[1].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
-    "egais license_status $($pre_nodes[2].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($pre_nodes[2].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
-    "egais db_creation_date $($pre_nodes[3].childNodes['#text'].Text.Replace(' ','T').Trim())"
-    if ($pre_nodes[4].childNodes['#text'].Text.Replace('&nbsp;','').Trim() -eq "Отсутствуют неотправленные розничные документы."){
-        "egais unsent_docs OK"
+    # UTM version <= 2.0.5
+    $status_nodes = $wr.DocumentNode.SelectNodes('//div[@class="container"]/div[@class="tab-content"]/div[@id="home"]/pre')
+    if ($status_nodes -ne $null)
+    {
+        $utm_ver = $status_nodes[0].ChildNodes['#text'].Text.Split("`n")
+        "egais transport_version OK $($utm_ver[0].Split(":")[1]) build $($utm_ver[2].Split(":")[1])"
+        "egais transport_status $($status_nodes[1].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($status_nodes[1].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
+        "egais license_status $($status_nodes[2].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($status_nodes[2].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
+        "egais db_creation_date $($status_nodes[3].childNodes['#text'].Text.Replace(' ','T').Trim())"
+        if ($status_nodes[4].childNodes['#text'].Text.Replace('&nbsp;','').Trim() -eq "Отсутствуют неотправленные розничные документы."){
+            "egais unsent_docs OK"
+        }
+        else {
+            $ar_split = $status_nodes[4].childNodes['#text'].Text.Replace('&nbsp;','').Trim().Split(' ')
+            "egais unsent_docs WARNING $($ar_split[0])T$($ar_split[1])$($ar_split[2])"
+        }
+        $ar_split = $status_nodes[5].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
+        $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
+        $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
+        "egais cert_age PKI $($status_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+        $ar_split = $status_nodes[6].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
+        $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
+        $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
+        "egais cert_age GOST $($status_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
     }
-    else {
-        $ar_split = $pre_nodes[4].childNodes['#text'].Text.Replace('&nbsp;','').Trim().Split(' ')
-        "egais unsent_docs WARNING $($ar_split[0])T$($ar_split[1])$($ar_split[2])"
+    else
+    {
+        # UTM version >= 2.1.6
+        $status_nodes = $wr.DocumentNode.SelectNodes('//div[@class="container"]/div[@class="tab-content"]/div[@id="home"]/div[@class="info-line row"]')
     }
-
-    $ar_split = $pre_nodes[5].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
-    $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
-    $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
-#    "egais cert_pki $($pre_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
-    "egais cert_age PKI $($pre_nodes[5].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
-
-    $ar_split = $pre_nodes[6].childNodes['#text'].Text.Replace('&nbsp;','').Split(' ')
-    $cert_from = "$($ar_split[4])T$($ar_split[5])$($ar_split[6])"
-    $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
-#    "egais cert_gost $($pre_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
-    "egais cert_age GOST $($pre_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
+    if ($status_nodes -ne $null)
+    {
+        $status_node = $status_nodes[0]
+        "egais transport_version OK $($status_node.ChildNodes[1].ChildNodes['#text'].Text)"
+        $status_node = $status_nodes[1]
+        "egais transport_status $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $(EscapeUnicode($status_node.ChildNodes[0].ChildNodes['#text'].Text)): $(EscapeUnicode($status_node.ChildNodes[1].ChildNodes['#text'].Text))"
+        $status_node = $status_nodes[2]
+        "egais license_status $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $(EscapeUnicode($status_node.ChildNodes[1].ChildNodes['#text'].Text))"
+        $status_node = $status_nodes[3]
+        "egais db_creation_date $($status_node.ChildNodes[1].ChildNodes['#text'].Text.Replace(' ','T'))"
+        $status_node = $status_nodes[4]
+        if ($status_node.ChildNodes[1].childNodes['#text'].Text -eq "Отсутствуют неотправленные чеки"){
+            "egais unsent_docs OK"
+        }
+        else {
+            $match_dates = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{4}-\d{2}-\d{2}')
+            $match_times = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{2}:\d{2}:\d{2}\.\d{3}')
+            $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
+            "egais unsent_docs WARNING $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value)"
+        }
+        $status_node = $status_nodes[5]
+        $match_dates = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{4}-\d{2}-\d{2}')
+        $match_times = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{2}:\d{2}:\d{2}')
+        $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
+        "egais cert_age PKI $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value) $($match_dates[1].Value)T$($match_times[1].Value)$($match_offsets[1].Value)"
+        $status_node = $status_nodes[6]
+        $match_dates = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{4}-\d{2}-\d{2}')
+        $match_times = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{2}:\d{2}:\d{2}')
+        $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
+        "egais cert_age GOST $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value) $($match_dates[1].Value)T$($match_times[1].Value)$($match_offsets[1].Value)"
+    }
 }
 else
 {
