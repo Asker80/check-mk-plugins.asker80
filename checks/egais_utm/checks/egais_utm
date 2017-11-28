@@ -89,27 +89,27 @@ def check_egais_utm_transport_version(item, params, info):
         if ( line[0], line[1] ) == ( "egais", "transport_version" ):
             status       = line[2]
             if status == "OK":
-                return 0, "Version %s" % ' '.join(line[3:len(line)])
+                return 0, "Version %s" % ' '.join(line[3:])
             else:
-                return 2, "%s" % ' '.join(line[3:len(line)])
+                return 2, "%s" % ' '.join(line[3:])
 
 def check_egais_utm_transport_status(item, params, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "transport_status" ):
             status       = line[2]
             if status == "OK":
-                return 0, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+                return 0, "%s" % ' '.join(line[3:]).decode('unicode-escape')
             else:
-                return 2, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+                return 2, "%s" % ' '.join(line[3:]).decode('unicode-escape')
 
 def check_egais_utm_license_status(item, params, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "license_status" ):
             status       = line[2]
             if status == "OK":
-                return 0, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+                return 0, "%s" % ' '.join(line[3:]).decode('unicode-escape')
             else:
-                return 2, "%s" % ' '.join(line[3:len(line)]).decode('unicode-escape')
+                return 2, "%s" % ' '.join(line[3:]).decode('unicode-escape')
 
 def check_egais_utm_db_creation_date(item, params, info):
     for line in info:
