@@ -32,6 +32,28 @@ register_check_parameters(
 
 register_check_parameters(
     subgroup_applications,
+    "egais_utm_incoming_docs_settings",
+    _("Egais UTM Incoming Docs"),
+    Dictionary(
+        elements = [
+            ( "levels",
+                Tuple(
+                    title = _("Egais UTM incoming docs age"),
+                    elements = [
+                        Integer(title = "Warning at", default_value = 2, unit = u"hours"),
+                        Integer(title = "Critical at", default_value = 5, unit = u"hours"),
+                    ],
+                ),
+            ),
+        ],
+        optional_keys = False,
+    ),
+    None,
+    match_type = 'dict',
+)
+
+register_check_parameters(
+    subgroup_applications,
     "egais_utm_cert_settings",
     _("Egais UTM Certificates"),
     Dictionary(

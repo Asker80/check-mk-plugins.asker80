@@ -40,9 +40,13 @@ def ParseAwareTimeStr(dtAwareStr, parseFormatStr):
 # egais unsent_docs OK
 # egais cert_pki OK 2017-10-19T10:48:08+1000 2018-10-19T10:58:08+1000
 # egais cert_gost OK 2017-10-18T10:49:01+1000 2018-10-18T10:59:01+1000
+# egais incoming_docs WARNING 2017-09-22T19:17:17.574
 
 factory_settings["unsent_docs_default_levels"] = {
     "levels"      : (15, 30),
+}
+factory_settings["incoming_docs_default_levels"] = {
+    "levels"      : (2, 5),
 }
 factory_settings["cert_default_levels"] = {
     "levels"      : (30, 15),
@@ -76,6 +80,11 @@ def inventory_egais_utm_unsent_docs(checkname, info):
     for line in info:
         if ( line[0], line[1] ) == ( "egais", "unsent_docs" ):
             yield None, {} #return [(None, None)]
+
+def inventory_egais_utm_incoming_docs(checkname, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "incoming_docs" ):
+            yield None, {}
 
 def inventory_egais_utm_cert_age(checkname, info):
     for line in info:
@@ -133,6 +142,24 @@ def check_egais_utm_unsent_docs(item, params, info):
                 elif dt_diff >= timedelta(minutes=warn):
                     state = 1
                 return state, u"Дата самого старого неотправленного розничного документа: %s (%s ago)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), get_age_human_readable(dt_diff.days*24*3600+dt_diff.seconds))
+
+def check_egais_utm_incoming_docs(item, params, info):
+    for line in info:
+        if ( line[0], line[1] ) == ( "egais", "incoming_docs" ):
+            status       = line[2]
+            if status == "OK":
+                return 0, u"Отсутствуют входящие документы"
+            else:
+                doc_date_str = line[3]
+                warn, crit = params["levels"]
+                timestamp = datetime.strptime(doc_date_str,'%Y-%m-%dT%H:%M:%S.%f')
+                state = 0
+                dt_diff = (datetime.now()) - timestamp
+                if dt_diff >= timedelta(hours=crit):
+                    state = 2
+                elif dt_diff >= timedelta(hours=warn):
+                    state = 1
+                return state, u"Дата самого старого необработанного входящего документа: %s (%s ago)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), get_age_human_readable(dt_diff.days*24*3600+dt_diff.seconds))
 
 def check_egais_utm_cert_age(item, params, info):
     for line in info:
@@ -195,6 +222,14 @@ check_info['egais_utm.unsent_docs']      = {
     "has_perfdata"            : False,
     "default_levels_variable" : "unsent_docs_default_levels",
     "group"                   : "egais_utm_unsent_docs_settings",
+}
+check_info['egais_utm.incoming_docs']      = {
+    "check_function"          : check_egais_utm_incoming_docs,
+    "inventory_function"      : inventory_egais_utm_incoming_docs,
+    "service_description"     : "EGAIS incoming docs",
+    "has_perfdata"            : False,
+    "default_levels_variable" : "incoming_docs_default_levels",
+    "group"                   : "egais_utm_incoming_docs_settings",
 }
 check_info['egais_utm.cert_age']      = {
     "check_function"          : check_egais_utm_cert_age,
