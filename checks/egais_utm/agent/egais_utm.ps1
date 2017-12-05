@@ -94,16 +94,16 @@ if ($web.StatusCode -eq 'OK')
         $cert_until = "$($ar_split[8])T$($ar_split[9])$($ar_split[10])"
         "egais cert_age GOST $($status_nodes[6].childNodes['img'].Attributes['alt'].Value) $cert_from`t$cert_until"
         $inc_doc_tbl = $wr.DocumentNode.SelectNodes('//div[@class="container"]/div[@class="tab-content"]/div[@id="menu5"]/table[@id="table-out"]')
-        $inc_doc_json = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=1&offset=0" -UseBasicParsing).Content
-        $inc_doc_json_parsed = $inc_doc_json | ConvertFrom-Json
-        if ($inc_doc_json_parsed.total -eq 0)
-        {
-            "egais incoming_docs OK"
-        }
-        else
-        {
-            "egais incoming_docs WARNING $($inc_doc_json_parsed.rows[0].timestamp.Replace(' ','T'))"
-        }
+#        $inc_doc_json = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=1&offset=0" -UseBasicParsing).Content
+#        $inc_doc_json_parsed = $inc_doc_json | ConvertFrom-Json
+#        if ($inc_doc_json_parsed.total -eq 0)
+#        {
+#            "egais incoming_docs OK"
+#        }
+#        else
+#        {
+#            "egais incoming_docs WARNING $($inc_doc_json_parsed.rows[0].timestamp.Replace(' ','T'))"
+#        }
         $status_nodes = $null
     }
     else
@@ -142,17 +142,51 @@ if ($web.StatusCode -eq 'OK')
         $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
         "egais cert_age GOST $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value) $($match_dates[1].Value)T$($match_times[1].Value)$($match_offsets[1].Value)"
         $inc_doc_tbl = $wr.DocumentNode.SelectNodes('//div[@class="container"]/div[@class="tab-content"]/div[@id="menu5"]/div[@class="tbl-pane"]/table[@id="table-out"]')
-        $inc_doc_json = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=1&offset=0" -UseBasicParsing).Content
-        $inc_doc_json_parsed = $inc_doc_json | ConvertFrom-Json
-        if ($inc_doc_json_parsed.total -eq 0)
+#        $inc_doc_json = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=1&offset=0" -UseBasicParsing).Content
+#        $inc_doc_json_parsed = $inc_doc_json | ConvertFrom-Json
+#        if ($inc_doc_json_parsed.total -eq 0)
+#        {
+#            "egais incoming_docs OK"
+#        }
+#        else
+#        {
+#            "egais incoming_docs WARNING $($inc_doc_json_parsed.rows[0].timestamp.Replace(' ','T'))"
+#        }
+        $status_nodes = $null
+    }
+    if ($inc_doc_tbl -ne $null)
+    {
+        try{
+            $json1_str = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=1&offset=0" -UseBasicParsing).Content
+        }catch{
+            $ErrorActionPreference = $prevEAP
+            return
+        }
+        $json1 = ConvertFrom-Json $json1_str
+        if ($json1.total -eq 0)
         {
             "egais incoming_docs OK"
         }
         else
         {
-            "egais incoming_docs WARNING $($inc_doc_json_parsed.rows[0].timestamp.Replace(' ','T'))"
+            try{
+                $json2_str = (Invoke-WebRequest "$url/$($inc_doc_tbl[0].Attributes['data-url'].Value)?order=asc&limit=$($json1.total)&offset=0" -UseBasicParsing).Content
+            }catch{
+                $ErrorActionPreference = $prevEAP
+                return
+            }
+            $json2 = ConvertFrom-Json $json2_str
+            $arDocs = $json2.rows | select id, type, state, timestamp
+            $arDocsUnprocessed = $arDocs | ?{$_.state -eq 0}
+            if ($arDocsUnprocessed -eq $null)
+            {
+                "egais incoming_docs OK"
+            }
+            else
+            {
+                "egais incoming_docs WARNING $($arDocsUnprocessed[0].timestamp.Replace(' ','T'))"
+            }
         }
-        $status_nodes = $null
     }
 }
 else
