@@ -113,15 +113,25 @@ if ($web.StatusCode -eq 'OK')
     }
     if ($status_nodes -ne $null)
     {
-        $status_node = $status_nodes[0]
+        $idx = 0
+        $status_node = $status_nodes[$idx]
         "egais transport_version OK $($status_node.ChildNodes[1].ChildNodes['#text'].Text)"
-        $status_node = $status_nodes[1]
+        $idx += 1
+        $status_node = $status_nodes[$idx]
         "egais transport_status $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $(EscapeUnicode($status_node.ChildNodes[0].ChildNodes['#text'].Text)): $(EscapeUnicode($status_node.ChildNodes[1].ChildNodes['#text'].Text))"
-        $status_node = $status_nodes[2]
+        if ($status_node.ChildNodes[0].ChildNodes['#text'].Text -eq 'Продуктивный контур') {
+            $idx += 1
+        }
+        elseif ($status_node.ChildNodes[0].ChildNodes['#text'].Text -eq 'Проблемы с RSA') {
+            $idx += 2
+        }
+        $status_node = $status_nodes[$idx]
         "egais license_status $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $(EscapeUnicode($status_node.ChildNodes[1].ChildNodes['#text'].Text))"
-        $status_node = $status_nodes[3]
+        $idx += 1
+        $status_node = $status_nodes[$idx]
         "egais db_creation_date $($status_node.ChildNodes[1].ChildNodes['#text'].Text.Replace(' ','T'))"
-        $status_node = $status_nodes[4]
+        $idx += 1
+        $status_node = $status_nodes[$idx]
         if ($status_node.ChildNodes[1].childNodes['#text'].Text -eq "Отсутствуют неотправленные чеки"){
             "egais unsent_docs OK"
         }
@@ -131,12 +141,14 @@ if ($web.StatusCode -eq 'OK')
             $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
             "egais unsent_docs WARNING $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value)"
         }
-        $status_node = $status_nodes[5]
+        $idx += 1
+        $status_node = $status_nodes[$idx]
         $match_dates = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{4}-\d{2}-\d{2}')
         $match_times = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{2}:\d{2}:\d{2}')
         $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
         "egais cert_age PKI $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $($match_dates[0].Value)T$($match_times[0].Value)$($match_offsets[0].Value) $($match_dates[1].Value)T$($match_times[1].Value)$($match_offsets[1].Value)"
-        $status_node = $status_nodes[6]
+        $idx += 1
+        $status_node = $status_nodes[$idx]
         $match_dates = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{4}-\d{2}-\d{2}')
         $match_times = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\d{2}:\d{2}:\d{2}')
         $match_offsets = [regex]::Matches($status_node.ChildNodes[1].ChildNodes['#text'].Text, '\+\d{4}')
