@@ -45,6 +45,12 @@ register_check_parameters(
                     ],
                 ),
             ),
+            ( "show_levels",
+                Checkbox(
+                    title = _("Process warn/crit levels"),
+                    label = _("Process warn/crit levels (always OK if unchecked)"),
+                    default_value = True),
+            ),
         ],
         optional_keys = False,
     ),

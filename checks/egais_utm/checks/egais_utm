@@ -47,6 +47,7 @@ factory_settings["unsent_docs_default_levels"] = {
 }
 factory_settings["incoming_docs_default_levels"] = {
     "levels"      : (2, 5),
+    "show_levels" : True,
 }
 factory_settings["cert_default_levels"] = {
     "levels"      : (30, 15),
@@ -152,12 +153,13 @@ def check_egais_utm_incoming_docs(item, params, info):
             else:
                 doc_date_str = line[3]
                 warn, crit = params["levels"]
+                process_levels = params["show_levels"]
                 timestamp = datetime.strptime(doc_date_str,'%Y-%m-%dT%H:%M:%S.%f')
                 state = 0
                 dt_diff = (datetime.now()) - timestamp
-                if dt_diff >= timedelta(hours=crit):
+                if dt_diff >= timedelta(hours=crit) and process_levels:
                     state = 2
-                elif dt_diff >= timedelta(hours=warn):
+                elif dt_diff >= timedelta(hours=warn) and process_levels:
                     state = 1
                 return state, u"Дата самого старого необработанного входящего документа: %s (%s ago)" % (timestamp.strftime('%Y-%m-%d %H:%M:%S'), get_age_human_readable(dt_diff.days*24*3600+dt_diff.seconds))
 
