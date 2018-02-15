@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
-# Requires pytz module. Centos install: yum install pytz
 
 from datetime import datetime, timedelta, tzinfo
-import pytz
 
 class FixedOffset(tzinfo):
     """Fixed offset in minutes: `time = utc_time + utc_offset`."""
@@ -137,7 +135,7 @@ def check_egais_utm_unsent_docs(item, params, info):
                 warn, crit = params["levels"]
                 timestamp = ParseAwareTimeStr(doc_date_str, '%Y-%m-%dT%H:%M:%S.%f')
                 state = 0
-                dt_diff = (datetime.now(pytz.utc)) - timestamp
+                dt_diff = (datetime.now(FixedOffset(0))) - timestamp
                 if dt_diff >= timedelta(minutes=crit):
                     state = 2
                 elif dt_diff >= timedelta(minutes=warn):
@@ -179,7 +177,7 @@ def check_egais_utm_cert_age(item, params, info):
                     warn, crit = params["levels"]
                     timestamp = ParseAwareTimeStr(cert_expire, '%Y-%m-%dT%H:%M:%S')
                     state = 0
-                    dt_diff = timestamp - datetime.now(pytz.utc)
+                    dt_diff = timestamp - datetime.now(FixedOffset(0))
                     if dt_diff <= timedelta(days=crit):
                         state = 2
                     elif dt_diff <= timedelta(days=warn):
