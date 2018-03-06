@@ -1,0 +1,5 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+def format_item_ups_out_load(name):
+    return name if name else "0"

@@ -1,0 +1,71 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# tails. You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+
+factory_settings["ups_bat_temp_default"] = {
+    "levels"    : (40, 50),
+}
+
+
+def format_item_ups_bat_temp(name, new_format):
+    if new_format:
+        return "Battery %s" % name
+    else:
+        return name
+
+
+def inventory_ups_bat_temp(info):
+    # 2nd condition is needed to catch some UPS devices which do not have
+    # any temperature sensor but report a 0 as upsBatteryTemperature. Skip those lines
+    if len(info) > 0 and saveint(info[0][1]) != 0:
+        return [(format_item_ups_bat_temp(line[0], True), "ups_bat_temp_default")
+                for line in info]
+
+
+def check_ups_bat_temp(item, params, info):
+    for line in info:
+        name = format_item_ups_bat_temp(line[0], "Battery" in item)
+        if name == item:
+            status, infotext, perfdata = check_temperature(int(line[1]), params,
+                                                           "ups_bat_temp_%s" % item)
+            perfdatanew = [ perfdata[0] + (80,) ]
+            return status, infotext, perfdatanew
+
+
+check_info['ups_eppc_bat_temp'] = {
+  "inventory_function"     : inventory_ups_bat_temp,
+  "check_function"         : check_ups_bat_temp,
+  "default_levels_variable": "ups_bat_temp_default",
+  "service_description"    : "Temperature %s",
+  "has_perfdata"           : True,
+  "group"                  : "temperature",
+  "snmp_info"              : ( ".1.3.6.1.2.1.33.1", [
+                              "1.5", # upsIdentName
+                              "2.7", # upsBatteryTemperature
+                          ] ),
+  "snmp_scan_function"     : lambda oid: oid(".1.3.6.1.2.1.1.2.0").startswith(".1.3.6.1.4.1.935.10.1"),
+  "includes"               : [ "temperature.include" ],
+}

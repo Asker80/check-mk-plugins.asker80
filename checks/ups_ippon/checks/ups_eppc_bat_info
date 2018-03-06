@@ -1,0 +1,51 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+
+def inventory_ups_eppc_battinfo(info):
+    if len(info) > 0:
+        return [(None, {})]
+
+def check_ups_eppc_battinfo(item, params, info):
+    bat_status, bat_voltage, bat_current = info[0]
+  
+    # Battery status
+    if bat_status:
+        bat_status = saveint(bat_status)
+        state = 0
+        infotxt = 'BatteryStatus: ' + \
+                    { 1:'unknown(1)', 2:'batteryNormal(2)',
+                    3:'batteryLow(3)', 4:'batteryDepleted(4)'}[bat_status]
+        
+        if bat_status != 2:
+            state = 2
+
+        yield state, infotxt
+
+    # Battery voltage
+    if bat_voltage:
+        bat_voltage = saveint(bat_voltage)
+        if bat_voltage > 0:
+            state = 0
+            infotxt = "BatteryVoltage: %.1fV" % (bat_voltage / 10)
+            yield state, infotxt
+
+    # Battery current
+    if bat_current:
+        bat_current = saveint(bat_current)
+        if bat_current > 0:
+            state = 0
+            infotxt = "BatteryCurrent: %.1fA" % (bat_current / 10)
+            yield state, infotxt
+
+
+check_info["ups_eppc_bat_info"] = {
+    "check_function"        : check_ups_eppc_battinfo,
+    "inventory_function"    : inventory_ups_eppc_battinfo,
+    "service_description"   : "Battery info",
+    "snmp_info"             : ( ".1.3.6.1.2.1.33.1.2", [
+                                      "1.0",     # upsBatteryStatus
+                                      "5.0",     # upsBatteryVoltage
+                                      "6.0",     # upsBatteryCurrent
+                              ]),
+    "snmp_scan_function"  : lambda oid: oid(".1.3.6.1.2.1.1.2.0").startswith(".1.3.6.1.4.1.935.10.1"),
+}
