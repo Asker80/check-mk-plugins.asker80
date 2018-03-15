@@ -104,7 +104,7 @@ def check_ups_capacity(item, params, info):
 
     # Output time on battery
     if time_on_bat and saveint(time_on_bat) > 0:
-        yield 0, "On battery for %d min" % saveint(time_on_bat)
+        yield 0, "On battery for %d min" % (saveint(time_on_bat)/60)
 
 check_info["ups_eppc_capacity"] = {
     "check_function"        : check_ups_capacity,
