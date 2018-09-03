@@ -32,6 +32,18 @@ function EscapeUnicode([string] $inStr)
 $prevEAP = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
+$env_var = [Environment]::ExpandEnvironmentVariables('%MK_CONFDIR%')
+$cfgFileName = 'C:\Program Files (x86)\check_mk\egais_utm.json'
+if ($env_var -ne '%MK_CONFDIR%')
+{
+    $cfgFileName = Join-Path (Split-Path $env_var) 'egais_utm.json'
+}
+if (Test-Path $cfgFileName)
+{
+    $egais_utm_cfg = gc $cfgFileName | ConvertFrom-Json
+    $url = "http://$($egais_utm_cfg.ComputerName):8080"
+}
+
 "<<<egais_utm>>>"
 
 $env_var = [Environment]::ExpandEnvironmentVariables('%MK_PLUGINSDIR%')
