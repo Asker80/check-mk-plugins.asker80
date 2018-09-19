@@ -2,6 +2,7 @@
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 
 from datetime import datetime, timedelta, tzinfo
+import re
 
 class FixedOffset(tzinfo):
     """Fixed offset in minutes: `time = utc_time + utc_offset`."""
@@ -152,9 +153,13 @@ def check_egais_utm_incoming_docs(item, params, info):
                 doc_date_str = line[3]
                 warn, crit = params["levels"]
                 process_levels = params["show_levels"]
-                timestamp = datetime.strptime(doc_date_str,'%Y-%m-%dT%H:%M:%S.%f')
+                if re.match(".+[+-]\d{4}$", doc_date_str):
+                    timestamp = ParseAwareTimeStr(doc_date_str,'%Y-%m-%dT%H:%M:%S.%f')
+                    dt_diff = (datetime.now(FixedOffset(0))) - timestamp
+                else:
+                    timestamp = datetime.strptime(doc_date_str,'%Y-%m-%dT%H:%M:%S.%f')
+                    dt_diff = (datetime.now()) - timestamp
                 state = 0
-                dt_diff = (datetime.now()) - timestamp
                 if dt_diff >= timedelta(hours=crit) and process_levels:
                     state = 2
                 elif dt_diff >= timedelta(hours=warn) and process_levels:
