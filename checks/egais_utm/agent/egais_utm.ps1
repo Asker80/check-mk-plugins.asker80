@@ -32,6 +32,8 @@ function EscapeUnicode([string] $inStr)
 $prevEAP = $ErrorActionPreference
 $ErrorActionPreference = 'SilentlyContinue'
 
+$utmServerName = $env:COMPUTERNAME
+
 $env_var = [Environment]::ExpandEnvironmentVariables('%MK_CONFDIR%')
 $cfgFileName = 'C:\Program Files (x86)\check_mk\egais_utm.json'
 if ($env_var -ne '%MK_CONFDIR%')
@@ -42,6 +44,7 @@ if (Test-Path $cfgFileName)
 {
     $egais_utm_cfg = gc $cfgFileName | ConvertFrom-Json
     $url = "http://$($egais_utm_cfg.ComputerName):8080"
+    $utmServerName = $egais_utm_cfg.ComputerName
 }
 
 "<<<egais_utm>>>"
@@ -66,7 +69,7 @@ $web = New-Object HtmlAgilityPack.HtmlWeb
 try{
     $wr = $web.Load($url)
 }catch {
-    "egais transport_version CRIT Cannot connect to server"
+    "egais transport_version CRIT Cannot connect to server $utmServerName"
     $ErrorActionPreference = $prevEAP
     return
 }
@@ -76,7 +79,7 @@ try{
 if ($web.StatusCode -eq 'OK')
 {
     if ($wr.DocumentNode.SelectSingleNode("//head/title").ChildNodes['#text'].Text -ne "УТМ"){
-        "egais transport_version CRIT HTML page is not Egais UTM"
+        "egais transport_version CRIT HTML page is not Egais UTM on server $utmServerName"
         $ErrorActionPreference = $prevEAP
         return
     }
@@ -86,7 +89,7 @@ if ($web.StatusCode -eq 'OK')
     if ($status_nodes -ne $null)
     {
         $utm_ver = $status_nodes[0].ChildNodes['#text'].Text.Split("`n")
-        "egais transport_version OK $($utm_ver[0].Split(":")[1]) build $($utm_ver[2].Split(":")[1])"
+        "egais transport_version OK $($utm_ver[0].Split(":")[1]) build $($utm_ver[2].Split(":")[1]),  Server $utmServerName"
         "egais transport_status $($status_nodes[1].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($status_nodes[1].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
         "egais license_status $($status_nodes[2].childNodes['img'].Attributes['alt'].Value) $(EscapeUnicode($status_nodes[2].childNodes['#text'].Text.Replace('&nbsp;','').Trim()))"
         "egais db_creation_date $($status_nodes[3].childNodes['#text'].Text.Replace(' ','T').Trim())"
@@ -127,7 +130,7 @@ if ($web.StatusCode -eq 'OK')
     {
         $idx = 0
         $status_node = $status_nodes[$idx]
-        "egais transport_version OK $($status_node.ChildNodes[1].ChildNodes['#text'].Text)"
+        "egais transport_version OK $($status_node.ChildNodes[1].ChildNodes['#text'].Text),  Server $utmServerName"
         $idx += 1
         $status_node = $status_nodes[$idx]
         "egais transport_status $(if($status_node.ChildNodes[0].ChildNodes[0].Attributes['class'].Value.Contains('glyphicon-ok')){'OK'}else{'WARNING'}) $(EscapeUnicode($status_node.ChildNodes[0].ChildNodes['#text'].Text)): $(EscapeUnicode($status_node.ChildNodes[1].ChildNodes['#text'].Text))"
@@ -215,7 +218,7 @@ if ($web.StatusCode -eq 'OK')
 }
 else
 {
-    "egais transport_version WARNING HTTP error $($web.StatusCode)"
+    "egais transport_version WARNING HTTP error $($web.StatusCode) on server $utmServerName"
 }
 $ErrorActionPreference = $prevEAP
 
